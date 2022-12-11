@@ -15,18 +15,45 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  final textStyle = TextStyle(fontSize: 22);
   final _nameInputController = TextEditingController();
   final _ageInputController = TextEditingController();
+  bool _nameInput = false;
+  bool _ageInput = false;
+  bool _buttonActive = false;
+  var listItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameInputController.addListener(() {
+      setState(() {
+        _nameInput = _nameInputController.text.isNotEmpty;
+      });
+    });
+    _ageInputController.addListener(() {
+      setState(() {
+        _ageInput = _ageInputController.text.isNotEmpty;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameInputController.dispose();
+    _ageInputController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<UsersBloc, UsersState>(
-      listener: (BuildContext context, state) {
-        if (state is UsersLoadedState) {
-          print(state.users);
-        }
-      },
-      child: Padding(
+    _buttonActive = _nameInput && _ageInput;
+    return BlocConsumer<UsersBloc, UsersState>(listener: (context, state) {
+      if (state is UsersLoadedState) {
+        listItems = state.users;
+      }
+    }, builder: (context, state) {
+      return Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -36,7 +63,7 @@ class _MainScreenState extends State<MainScreen> {
               decoration: InputDecoration(
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                labelText: 'Enter valid user name',
+                labelText: 'Enter user name',
               ),
             ),
             const SizedBox(
@@ -59,27 +86,50 @@ class _MainScreenState extends State<MainScreen> {
               height: 16,
             ),
             ElevatedButton(
-              onPressed: () {
-                _addTestValues();
-                showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return const AlertDialog(
-                        title: Text("Success"),
-                        content: Text("User added"),
-                      );
-                    });
-              },
-              child: const Text('Add test users'),
+              onPressed: _buttonActive ? () => _addTestValues() : null,
+              child: const Text('ADD USER'),
             ),
             ElevatedButton(
               onPressed: _printUsers,
-              child: const Text('Print DB'),
+              child: const Text('Print     DB'),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView.builder(
+                    scrollDirection: Axis.vertical,
+                    shrinkWrap: true,
+                    itemCount: listItems.length,
+                    itemBuilder: (context, index) {
+                      final item = listItems[index];
+                      return Container(
+                        height: 30,
+                        color: Colors.grey.shade100,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Text(item.id.toString(), style: textStyle,),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            Text(
+                              item.name.toString(),
+                              style: textStyle,
+                            ),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            Text(item.age.toString(), style: textStyle,),
+                          ],
+                        ),
+                      );
+                    }),
+              ),
             ),
           ],
         ),
-      ),
-    );
+      );
+    });
   }
 
   void _addTestValues() {
@@ -95,12 +145,18 @@ class _MainScreenState extends State<MainScreen> {
     FocusScope.of(context).unfocus();
     _nameInputController.clear();
     _ageInputController.clear();
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return const AlertDialog(
+            title: Text("Success"),
+            content: Text("User added"),
+          );
+        });
   }
 
   void _printUsers() {
     final bloc = BlocProvider.of<UsersBloc>(context);
-    //bloc.add(LoadUsersEvent());
-    
-    
+    bloc.add(LoadUsersEvent());
   }
 }
